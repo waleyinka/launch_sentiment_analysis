@@ -1,0 +1,16 @@
+config/
+
+.env
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.env
+.venv/
+venv/
+
+data/raw/
+data/extracted/
+logs/
