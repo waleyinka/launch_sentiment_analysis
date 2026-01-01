@@ -4,11 +4,7 @@
 This DAG orchestrates the ingestion of one hour of Wikipedia pageviews, filters it to five companies (Amazon, Apple,
 Facebook, Google, & Microsoft), persists the result, and enables a downstream analytical query.
 
-Target timestamp: 4pm - 5pm data for 10th of December, 2025
-Corresponding Wikimedia URL: https://dumps.wikimedia.org/other/pageviews/2025/2025-12/pageviews-20251210-170000.gz
 Successful run returns: a cleaned/analysed data showing which of the filtered company had the highest views
-
-
 """
 
 # Import standard libraries
@@ -27,6 +23,7 @@ from launch_sentiment.include.utils.transform_pageviews import transform_data
 from launch_sentiment.include.utils.load_pageviews import load_data
 
 from launch_sentiment.include.common.config import WIKIMEDIA_BASE_URL
+
 
 # -------------------------------
 # Constants
