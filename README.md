@@ -112,7 +112,7 @@ Each DAG run processes **exactly one hour** of data.
 
 ![Airflow Pipeline](images/pageviews-20251210-150000.png)
 
-![Airflow Pipeline](images/pageviews-20251231-130000.png)
+*Airflow Pipeline - 20251210-150000*
 
 ---
 
@@ -127,6 +127,10 @@ Why `data_interval_end`?
  - Airflow runs represent time intervals
  - Wikimedia filenames use hour-end timestamps
  - This creates a clean, offset‑free mapping
+
+![Airflow Pipeline](images/pageviews-20251231-130000.png)
+
+*Airflow Pipeline - 20251231-130000*
 
 ---
 
