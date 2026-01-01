@@ -11,12 +11,10 @@
  - Key Design Decisions
  - Pipeline Architecture
  - Airflow Time & Scheduling Model
- - Task Breakdown
  - Database Schema
  - Project Structure
  - Environment Setup
  - How to Run the Project
- - Testing
  - Validation & Analysis
  - Failure Handling & Idempotence
  - Scaling & Backfills
@@ -27,15 +25,16 @@
 
 ## Project Overview
 
-LaunchSentiment is an Apache Airflow–orchestrated data pipeline that ingests hourly Wikipedia pageviews data, processes it to extract view counts for selected companies, and loads the results into a PostgreSQL database for analysis.
+LaunchSentiment is an **Apache Airflow**–orchestrated data pipeline that ingests hourly Wikipedia pageviews data, processes it to extract view counts for selected companies, and loads the results into a PostgreSQL database for downstream analysis.
 
-The project is designed as a production-style capstone, emphasizing:
+The project emphasizes:
 
  - correct time semantics
- - idempotent task design
+ - idempotent, retry‑safe task design
  - deterministic outputs
- - safe retries and backfills
  - clean separation of orchestration and business logic
+
+This mirrors real‑world data engineering patterns while remaining lightweight and easy to run locally.
 
 ---
 
@@ -44,9 +43,9 @@ The project is designed as a production-style capstone, emphasizing:
 Public attention is often correlated with sentiment.
 This project explores a simple hypothesis:
 
- An increase in a company’s Wikipedia pageviews may indicate increased public interest and potentially positive sentiment.
+ **An increase in a company’s Wikipedia pageviews may indicate increased public interest and potentially positive sentiment.**
 
-To validate this hypothesis at a small scale, the pipeline tracks hourly pageviews for the following companies:
+To test this idea, the pipeline tracks hourly pageviews for:
 
  - Amazon
  - Apple
@@ -74,8 +73,7 @@ Wikimedia names files using the **end of the hour**.
 
 Example:
 
- - `pageviews-20251210-170000.gz`
- - Represents pageviews from **16:00–17:00 UTC**
+ - `pageviews-20251210-170000.gz` -> represents pageviews from **16:00–17:00 UTC**
 
 This convention directly informs the Airflow time design.
 
@@ -83,17 +81,17 @@ This convention directly informs the Airflow time design.
 
 ## Key Design Decisions
 
- - **Airflow data interval–based time handling**
+ - **Data‑interval–based time handling**
    All paths, URLs, and timestamps are derived from `data_interval_end`.
 
  - **Idempotent tasks**
-   Every task can be safely retried or rerun without corrupting state.
+   Every task can be retried or backfilled without corrupting state.
 
  - **Deterministic artifacts**
-   Outputs are stable across runs to prevent flaky behavior.
+   Outputs are stable across runs.
 
- - **DDL baked into load step**
-   The pipeline owns its storage contract and can run on a fresh database.
+ - **DDL included in the load step**
+   The pipeline can initialize its own storage layer.
 
 --
 
@@ -110,7 +108,11 @@ transform_pageviews
 load_pageviews
 ```
 
-Each Airflow run processes **exactly one hour** of data.
+Each DAG run processes **exactly one hour** of data.
+
+![Airflow Pipeline](images/pageviews-20251210-150000.png)
+
+![Airflow Pipeline](images/pageviews-20251231-130000.png)
 
 ---
 
@@ -124,7 +126,7 @@ Why `data_interval_end`?
 
  - Airflow runs represent time intervals
  - Wikimedia filenames use hour-end timestamps
- - This creates a clean one-to-one mapping with no offsets or hacks
+ - This creates a clean, offset‑free mapping
 
 ---
 
@@ -201,7 +203,7 @@ Environment variables are loaded via `config.py`.
 
 ---
 
-## How to Run the Project
+## How to Run the Pipeline
 
 ### 1. Install dependencies
 
@@ -214,11 +216,11 @@ pip install -r requirements.txt
 airflow standalone
 ```
 
-### 3. Place DAG
+### 3. Add the DAG
 
-Ensure `launch_sentiment.py` is in your Airflow DAGs folder.
+Place `launch_sentiment.py` in your Airflow DAGs folder.
 
-### 4. Trigger DAG
+### 4. Trigger the DAG
 
 Trigger `launch_sentiment` from the Airflow UI.
 
@@ -228,7 +230,7 @@ Each run processes **one hour of Wikimedia data** based on `data_interval_end`.
 
 ## Validation & Analysis
 
-After a successful run, identify the company with the highest pageviews for a given hour:
+Example query to find the company with the highest pageviews:
 ```sql
 SELECT company_name, pageviews
 FROM pageviews_hourly
@@ -240,35 +242,35 @@ LIMIT 1;
 
 ## Failure Handling & Idempotence
 
- - Fetch and extract use atomic file writes
- - Transform overwrites deterministic CSVs
- - Load runs inside a transaction
- - Delete + insert guarantees hour-level correctness
- - Safe retries and backfills are supported
+ - Atomic file writes in fetch/extract
+ - Deterministic CSV outputs
+ - Load step runs inside a transaction
+ - Delete + insert ensures hour‑level correctness
+ - Safe retries and backfills supported
 
 ---
 
 ## Scaling & Backfills
 
- - Enable catchup=True to process historical hours
+ - Enable `catchup=True` to process historical hours
  - Each hour produces isolated artifacts
- - Database partitions naturally by hour_timestamp
- - Indexing can be added for scale
+ - Database partitions naturally by `hour_timestamp`
+ - Indexing can be added for performance
 
 ---
 
 ## Key Learnings
 
- - Airflow is orchestration, not transformation logic
- - Idempotence is the foundation of reliable pipelines
- - Deterministic outputs prevent flaky behavior
- - Clear contracts between tasks simplify reasoning]
+ - Airflow is for orchestration, not transformation
+ - Idempotence is essential for reliability
+ - Deterministic outputs prevent flaky pipelines
+ - Clear contracts between tasks simplify reasoning
 
 ---
 
 ## Future Improvements
 
- - Company title normalization mapping
+ - Company title normalization
  - Data retention and cleanup policies
  - Indexes on `hour_timestamp`
  - Metrics and alerts
