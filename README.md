@@ -1,7 +1,6 @@
 # LaunchSentiment
-**Wikipedia Pageviews–Driven Sentiment Pipeline with Apache Airflow**
 
-**Wikipedia Pageviews–Driven Sentiment Pipeline Orchestrated with Apache Airflow**
+***A Wikipedia Pageviews–Driven Sentiment Pipeline Orchestrated with Apache Airflow***
 
 ## Table of Contents
 
