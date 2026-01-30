@@ -1,16 +1,21 @@
 """
-Transform a raw Wikimedia pageviews text file for one hour into a structured
-dataset containing aggregated pageview counts for selected companies.
+This module transforms raw Wikimedia pageviews into a structured hourly dataset (CSV).
 
-The function:
-- Streams a large input file line by line
-- Filters for target company page titles
-- Aggregates pageviews per company
-- Writes a CSV output suitable for database loading
+The input is a plain text file containing space-delimited records:
+project page_title view_count response_size
+
+This module:
+- streams a large input file line by line
+- filters to English Wikipedia (project code "en")
+- aggregates pageviews for a configured list of company page titles
+- writes a CSV output suitable for database loading
 """
+
+from __future__ import annotations
 
 import os
 import csv
+from pathlib import Path
 
 from launch_sentiment.include.common.logger_config import get_logger
 
@@ -52,38 +57,49 @@ def transform_data(
         raise ValueError("Hour timestamp is required for transformation")
     
     logger.info(
-        "Starting transformation for %s using file %s",
-        target_hour_timestamp,
-        input_file_path,
+        "Starting transformation for %s", target_hour_timestamp
     )
     
     # Initialize aggregate container - One accumulator per company
     totals = {company: 0 for company in target_companies}
 
     # Stream through the input file line by line
-    with open(input_file_path, "r") as stream:
+    with open(input_file_path, "r", encoding="utf-8") as stream:
         
         for line in stream:
-            try:
-                parts = line.split()
-
-                domain_code = parts[0]
-                page_title = parts[1]
-                view_count = int(parts[2])
-                response_size = parts[3]
-            
-            except (IndexError, ValueError):
-                logger.warning("Malformed line encountered, skipping")
+            parts = line.split()
+            if len(parts) < 4:
                 continue
+
+            domain_code = parts[0]
+            page_title = parts[1]
+            # view_count = int(parts[2])
+            # response_size = parts[3]
+                
+            if domain_code != "en":
+                continue
+                
+            if page_title not in totals:
+                continue
+                
+            try:
+                view_count = int(parts[2])
+            except ValueError:
+                logger.warning("Invalid view count, skipping line")
+                continue
+                
+            if view_count < 0:
+                logger.warning("Negative view count, skipping line")
+                continue
+    
+            totals[page_title] += view_count
+
             
-            # Filter for target companies (exact match)
-            if page_title in totals:
-                totals[page_title] += view_count
+    output_path = Path(output_file_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = output_path.with_suffix(output_path.suffix + ".tmp")
     
-    # Write structured output
-    os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
-    
-    with open(output_file_path, 'w', newline='', encoding="utf-8") as csvfile:
+    with open(tmp_path, 'w', newline='', encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile)
 
         # Header
@@ -95,10 +111,12 @@ def transform_data(
         for company in sorted(totals.keys()):
             writer.writerow([company, totals[company], target_hour_timestamp])
     
+    os.replace(tmp_path, output_path)
+    
     logger.info(
         "Transformation completed successfully. Wrote %s rows to %s",
         len(totals),
-        output_file_path,
+        output_path,
     )
     
     return totals

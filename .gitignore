@@ -8,7 +8,10 @@ __pycache__/
 .env
 .venv/
 venv/
+/home/iamomowale/airflow/venv
+/home/iamomowale/airflow/.env
 
 data/raw/
 data/extracted/
+data/transformed/
 logs/
